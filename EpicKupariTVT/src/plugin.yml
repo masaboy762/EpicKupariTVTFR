@@ -1,0 +1,17 @@
+name: EpicKupariTVT
+version: 1.0
+main: happylaama.EpicKupariTVT.Main  # Replace with your plugin's main class path
+api-version: 1.21  # Specify the Minecraft API version you're targeting
+
+commands:
+  mycommand:
+    description: Komennon voi suorittaa kaksi kertaa ensimmäisellä kerralla komento aloittaa pelin siihen kohtaan missä se odottaa pelaajia seuraavan kerran kun komento suoritetaan se aloittaa pelin.
+    usage: /STARTGAME
+    permission: EpicKupariTVT.USE
+permissions:
+    EpicKupariTVT.KupariTiimi: {}
+    EpicKupariTVT.KultaTiimi: {}
+    EpicKupariTVT.OP:
+        default: op
+    EpicKupariTVT.USE:
+        default: op
