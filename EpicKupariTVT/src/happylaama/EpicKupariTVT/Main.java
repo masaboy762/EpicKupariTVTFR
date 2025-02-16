@@ -1,19 +1,35 @@
 package happylaama.EpicKupariTVT;
 
+
+
+
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
+import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -21,10 +37,14 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+
+
+
 import org.bukkit.configuration.file.FileConfiguration;
 public class Main extends JavaPlugin implements Listener{
 	
@@ -32,46 +52,77 @@ public class Main extends JavaPlugin implements Listener{
 	private boolean GameStarting = false;
 	private List<Player> TeamKupari = new ArrayList<>();
 	private List<Player> TeamKulta = new ArrayList<>();
-	private List<Player> PVPON = new ArrayList<>();
+	private List<Player> TeamKuparik = new ArrayList<>();
+	private List<Player> TeamKultak = new ArrayList<>();
+	private List<Player> LATEPLAYERS = new ArrayList<>();
 	private FileConfiguration config = getConfig();
 	@Override
 	public void onEnable() {
 		saveDefaultConfig();
-
-        // Get config
+		
+        Bukkit.getPluginManager().registerEvents(this, this);
+		
         
 	}
+	@Override
+    public void onDisable() {  
+    }
+	
 	@EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getView().getTitle().equals("Valitse tiimi.")) {
-            event.setCancelled(true); // Prevent moving items
+        if (event.getView().getTitle().equals("Valitse tiimi")) {
+            event.setCancelled(true);
 
             Player player = (Player) event.getWhoClicked();
             Material clickedItem = event.getCurrentItem().getType();
-            String selectedTeam = "None";
+           
             if (event.getCurrentItem() == null) return;
 
             if (clickedItem == Material.COPPER_BLOCK) {
-                selectedTeam = "Kupari";
+            	player.addAttachment(this).setPermission("EpicKupariTVT.KupariTiimi", true);
+            	player.sendMessage("Sinä Valitsit Tiimin Kupari");
                 TeamKupari.add(player);
+                TeamKuparik.add(player);
+                player.closeInventory();
             } else if (clickedItem == Material.GOLD_BLOCK) {
-                selectedTeam = "Kulta";
+            	player.addAttachment(this).setPermission("EpicKupariTVT.KultaTiimi", true);
+            	player.sendMessage("Sinä Valitsit Tiimin Kulta");
                 TeamKulta.add(player);
+                TeamKultak.add(player);
+                player.closeInventory();
             }
 
-            player.closeInventory(); // Close the inventory
+            
 
-            // Now, return the selected team
-            player.sendMessage("Sinä Valitsit: " + selectedTeam);
+            
+        }
+    }
+	@EventHandler
+    public void onPlayerDamage(EntityDamageEvent event) {
+        
+        if (event.getEntity() instanceof Player) {
+            Player damagedPlayer = (Player) event.getEntity();  
+
+            
+            if (event instanceof EntityDamageByEntityEvent) {
+                EntityDamageByEntityEvent damageEvent = (EntityDamageByEntityEvent) event;
+
+                
+                if (damageEvent.getDamager() instanceof Player) {
+                    Player attackingPlayer = (Player) damageEvent.getDamager(); 
+                    if ((TeamKupari.contains(damagedPlayer) && TeamKupari.contains(attackingPlayer)) || 
+                        (TeamKulta.contains(damagedPlayer) && TeamKulta.contains(attackingPlayer))) {
+                        event.setCancelled(true);  
+                        
+                    }
+                }
+            }
         }
     }
 	@EventHandler
 	public void onPlayerJoin(PlayerJoinEvent event) {
-		
-		
-		if (event.getPlayer().hasPermission("EpicKupariTVT.OP")) { return;}
-		
 		if(GameStarting) {
+			event.getPlayer().sendTitle("PELI ALKAMASSA!", "Odotellaan pelaajia!", 10, 70, 20);
 			if(event.getPlayer().hasPermission("EpicKupariTVT.KupariTiimi")|| event.getPlayer().hasPermission("EpicKupariTVT.KultaTiimi")) {return;}
 			openTeamSelectionMenu(event.getPlayer());
 			return;
@@ -79,94 +130,291 @@ public class Main extends JavaPlugin implements Listener{
 		}
 		
 		if(GameRunning) {
-			if(event.getPlayer().hasPermission("EpicKupariTVT.KupariTiimi")|| event.getPlayer().hasPermission("EpicKupariTVT.KultaTiimi")) {event.getPlayer().setGameMode(GameMode.SPECTATOR);}
+			event.getPlayer().sendTitle("PELI ON JO ALKANUT", "", 10, 70, 20);
+			if (!event.getPlayer().isOp()) {
+				event.getPlayer().setGameMode(GameMode.SPECTATOR);
+				LATEPLAYERS.add(event.getPlayer());
+				return;
+			}
 		} 
 	}
 	@EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (event.getView().getTitle().equals("Select Your Team")) {
-            Player player = (Player) event.getPlayer();
+		if (TeamKupari.contains(event.getPlayer()) || TeamKulta.contains(event.getPlayer())) {
+			return;
+		} else {
+			if (event.getView().getTitle().equals("Valitse tiimi")) {
+	            Player player = (Player) event.getPlayer();
 
-            // If the player closes the inventory without selecting, reopen the menu
-            // Example condition, can be more complex
-                openTeamSelectionMenu(player);
-            
-        }
+	                openTeamSelectionMenu(player);
+	            
+	        }
+		}
+
     }
 
 	
 	@EventHandler
-	public void onPlayerDamage(EntityDamageByEntityEvent event) {
+    public void onPlayerDeath(PlayerDeathEvent event) {
 		if (event.getEntity() instanceof Player) {
-			Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "This is a message to the console!");
-
+        if(TeamKupari.contains(event.getEntity())) {
+        	TeamKupari.remove(event.getEntity());
+        	
+        }
+        if(TeamKulta.contains(event.getEntity())) {
+        	TeamKulta.remove(event.getEntity());
+        }
 		}
+		event.getEntity().setGameMode(GameMode.SPECTATOR);
 		
-	}
-	public void UpdateBossbar() {
-		
-	}
+    }
+	
 	@Override
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-	    if (!(sender instanceof Player)) {
-	        sender.sendMessage("Only players can use this command!");
-	        return true;
-	    }
-
+		
 	    
 
-	    if(GameRunning) {
-	    	GameStarting = true;
-	    	for (Player player : Bukkit.getOnlinePlayers()) {
-	            // Send the title to each player
-	            player.sendTitle("PELI ALKAMASSA!", "Odotellaan pelaajia!", 10, 70, 20);  // 10 = fade in, 70 = stay, 20 = fade out
-	        }
-	    } else if(GameStarting) {
-	    GameRunning = true;
-	    GAME();
-	    }
+	    if (command.getName().equalsIgnoreCase("STARTGAME")) {
+            
+
+	    	if(GameRunning) {
+		    	GameRunning = true;
+		    	sender.sendMessage("Peli aloitettu!");
+		    	
+		    	for (Player player : Bukkit.getOnlinePlayers()) {
+		            player.sendTitle("PELI ALKAMASSA!", "Odotellaan pelaajia!", 10, 70, 20); 
+		            
+		        }
+		    } else if(GameStarting) {
+		    	sender.sendMessage("odotellaan pelaajia! Lähetä komento uudestaan jotta peli alkaa");
+		    
+		    GameStarting = true;
+		    GAME();
+		    }
+            
+            return true;
+        }
+
+	    
 	    
 	    return true;
 	}
 	public void openTeamSelectionMenu(Player player) {
-	    // Create the inventory (chest GUI)
+
 	    Inventory gui = Bukkit.createInventory(null, 9, "Valitse tiimi");
 
-	    // Team Red Item
+
 	    ItemStack redTeam = new ItemStack(Material.COPPER_BLOCK);
 	    ItemMeta redMeta = redTeam.getItemMeta();
-	    redMeta.setDisplayName("§cLiity Kupari tiimiin");
+	    redMeta.setDisplayName("§cLiity Kupari tiimiin jossa on " + TeamKupari.size() + " pelaajaa");
 	    redTeam.setItemMeta(redMeta);
 
-	    // Team Blue Item
+
 	    ItemStack blueTeam = new ItemStack(Material.GOLD_BLOCK);
 	    ItemMeta blueMeta = blueTeam.getItemMeta();
-	    blueMeta.setDisplayName("§9Liity Kulta tiimiin");
+	    blueMeta.setDisplayName("§9Liity Kulta tiimiin jossa on " + TeamKulta.size() + " pelaajaa");
 	    blueTeam.setItemMeta(blueMeta);
+	    
+	    ItemStack Empty = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+	    ItemMeta EmptyMeta = Empty.getItemMeta();
+	    EmptyMeta.setDisplayName("Valitse Tiimi");
+	    Empty.setItemMeta(EmptyMeta);
 
-	    // Place items in the GUI
 	    gui.setItem(3, redTeam);
 	    gui.setItem(5, blueTeam);
+	    gui.setItem(1, Empty);
+	    gui.setItem(2, Empty);
+	    gui.setItem(4, Empty);
+	    gui.setItem(6, Empty);
+	    gui.setItem(7, Empty);
+	    gui.setItem(8, Empty);
+	    gui.setItem(9, Empty);
 
-	    // Open GUI for the player
 	    player.openInventory(gui);
-
-	    // Return a default value while waiting for the player's selection
 	    
 	}
-	private void GAME() {
-		
-		for (World world : Bukkit.getWorlds()) {
-            world.setPVP(true);
+	public int getRandomNumber(int min, int max) {
+        if (min > max) {
+            int temp = min;
+            min = max;
+            max = temp;
         }
+        return ThreadLocalRandom.current().nextInt(min, max + 1);
+    }
+	
+	private void GAME() {
+		 
+		 BossBar TeamKuparibar = Bukkit.createBossBar("§6Pelaajia Kupari tiimissä Jäljellä!", BarColor.RED, BarStyle.SOLID);
+		 BossBar TeamKultabar = Bukkit.createBossBar("§ePelaajia Kulta tiimissä jäljellä!", BarColor.YELLOW, BarStyle.SOLID);
+		 int TotalKupari = TeamKupari.size();
+		 int TotalKulta = TeamKulta.size();
+		 
+		for (Player player : TeamKupari) {
+			int x1 = config.getInt("KupariTiimiSpawnArea.X1");
+			int z1 = config.getInt("KupariTiimiSpawnArea.Z1");
+			int x2 = config.getInt("KupariTiimiSpawnArea.X2");
+			int z2 = config.getInt("KupariTiimiSpawnArea.Z2");
+			
+			
+			player.teleport(new Location(player.getWorld(), getRandomNumber(x1, x2), config.getInt("KupariTiimiSpawnArea.Y"), getRandomNumber(z1, z2)));
+			player.playSound(player.getLocation(), Sound.ITEM_GOAT_HORN_SOUND_2, 1.0f, 1.0f);
+			player.sendTitle("PELI ON ALKANUT!", "", 10, 70, 20);
+            
+        }
+		for (Player player : TeamKulta) {
+			int x1 = config.getInt("KultaTiimiSpawnArea.X1");
+			int z1 = config.getInt("KultaTiimiSpawnArea.Z1");
+			int x2 = config.getInt("KultaTiimiSpawnArea.X2");
+			int z2 = config.getInt("KultaTiimiSpawnArea.Z2");
+			
+			
+			player.teleport(new Location(player.getWorld(), getRandomNumber(x1, x2), config.getInt("KultaTiimiSpawnArea.Y"), getRandomNumber(z1, z2)));
+			player.playSound(player.getLocation(), Sound.ITEM_GOAT_HORN_SOUND_2, 1.0f, 1.0f);
+			player.sendTitle("PELI ON ALKANUT!", "", 10, 70, 20);
+           
+		}
 		
+		for (Player player : Bukkit.getServer().getOnlinePlayers()) {
+            TeamKuparibar.addPlayer(player);
+            TeamKultabar.addPlayer(player);
+            TeamKuparibar.setVisible(false);
+            
+        }
 		new BukkitRunnable() {
             @Override
             public void run() {
-                // Check if player is still online before continuing
+            	TeamKuparibar.setProgress(TeamKupari.size() / TotalKupari);
+            	TeamKuparibar.setTitle("§6" + TeamKupari.size() + " pelaajaa jäljellä Kupari tiimissä!");
+            	TeamKultabar.setProgress(TeamKulta.size() / TotalKulta);
+            	TeamKultabar.setTitle("§e" + TeamKulta.size() + " pelaajaa jäljellä Kulta tiimissä!");
+            	
+            	if(TeamKuparibar.isVisible()) {
+                	TeamKuparibar.setVisible(false);
+                	TeamKultabar.setVisible(true);
+                }else {
+                	TeamKuparibar.setVisible(true);
+                	TeamKultabar.setVisible(false);
+                }
+            	if (GameRunning) {
+            		if (TeamKulta.size() == 0) {
+            			getLogger().info("Kupari tiimi voitti siinä oli seuraavat pelaajat");
+            			for (Player player : TeamKuparik) {
+            				ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
+            		            console.sendMessage(player.getName());
+            		    }
+            			getLogger().info("Joista seuraavat pelaajat selvisivät hengissä loppuun asti");
+            			for (Player player : TeamKupari) {
+            				ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
+            		        
+            		            console.sendMessage(player.getName());
+            		        
+            		    }
+            			getLogger().info("Kuitenkin kiitos kaikille pelaamisesta");
+            			for (Player player : TeamKuparik) {
+            				ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
+            		        
+            		            console.sendMessage(player.getName());
+            		        
+            		    }
+            			for (Player player : TeamKultak) {
+            				ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
+            		        
+            		            console.sendMessage(player.getName());
+            		        
+            		    }
+            			
+            			getLogger().info("Myöhässä olevia pelaajia oli " + LATEPLAYERS);
+            			
+            			
+            			TeamKuparibar.setVisible(true);
+            			TeamKuparibar.setTitle("§6Kupari tiimi on voittanut!!!");
+            			for (Player player : Bukkit.getServer().getOnlinePlayers()) {
+            		        
+            		        player.sendTitle("§6Kupari tiimi on voittanut!!!", "", 20, 60, 20);
+            		    }
+            			for (int i = 0; i < 5; i++) {
+            				for (Player player : TeamKupari) {
+            					spawnRandomFirework(player.getLocation());
+            				}
+            				
+            			}
+                        this.cancel();
+                    }
+            		if(TeamKupari.size() == 0) {
+            			getLogger().info("Kulta tiimi voitti siinä oli seuraavat pelaajat");
+            			for (Player player : TeamKultak) {
+            				ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
+            		            console.sendMessage(player.getName());
+            		    }
+            			getLogger().info("Joista seuraavat pelaajat selvisivät hengissä loppuun asti");
+            			for (Player player : TeamKulta) {
+            				ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
+            		        
+            		            console.sendMessage(player.getName());
+            		        
+            		    }
+            			getLogger().info("Kuitenkin kiitos kaikille pelaamisesta");
+            			for (Player player : TeamKuparik) {
+            				ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
+            		        
+            		            console.sendMessage(player.getName());
+            		        
+            		    }
+            			for (Player player : TeamKultak) {
+            				ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
+            		        
+            		            console.sendMessage(player.getName());
+            		        
+            		    }
+            			getLogger().info("Myöhässä olevia pelaajia oli " + LATEPLAYERS);
+            			TeamKuparibar.setVisible(true);
+            			TeamKuparibar.setTitle("§eKulta tiimi on voittanut!!!");
+            			for (Player player : Bukkit.getServer().getOnlinePlayers()) {
+            		        player.sendTitle("§eKulta tiimi on voittanut!!!", "", 20, 60, 20);
+            		    }
+            			for (int i = 0; i < 5; i++) {
+            				for (Player player : TeamKulta) {
+            					spawnRandomFirework(player.getLocation());
+            				}
+            				
+            			}
+            			this.cancel();
+            		}
+            		
+            	}
                 
             }
-        }.runTaskTimerAsynchronously(this, 0L, 20L);  // Runs every 20 ticks (1 second)
+        }.runTaskTimerAsynchronously(this, 0L, 20L);  
     }
+	
+	public void spawnRandomFirework(Location location) {
+	    Firework firework = location.getWorld().spawn(location, Firework.class);
+
+	    FireworkEffect.Builder fireworkEffectBuilder = FireworkEffect.builder();
+
+	    Random random = new Random();
+	    FireworkEffect.Type[] types = FireworkEffect.Type.values();
+	    FireworkEffect.Type effectType = types[random.nextInt(types.length)];
+	    fireworkEffectBuilder.with(effectType);
+
+	    Color[] colors = {Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.PURPLE, Color.ORANGE};
+	    Color color1 = colors[random.nextInt(colors.length)];
+	    Color color2 = colors[random.nextInt(colors.length)];
+	    
+	    fireworkEffectBuilder.withColor(color1);
+	    fireworkEffectBuilder.withFade(color2);
+	    
+
+	    fireworkEffectBuilder.trail(random.nextBoolean());
+	    fireworkEffectBuilder.flicker(random.nextBoolean());
+	    
+
+	    FireworkEffect fireworkEffect = fireworkEffectBuilder.build();
+	    FireworkMeta fireworkMeta = firework.getFireworkMeta();
+	    fireworkMeta.addEffect(fireworkEffect);
+	    fireworkMeta.setPower(random.nextInt(3) + 1);
+	    
+	    firework.setFireworkMeta(fireworkMeta);
+	}
 	}
 

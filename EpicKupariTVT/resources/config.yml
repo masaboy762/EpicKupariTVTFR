@@ -1,9 +1,12 @@
-
-#   HUOM!!!! PVPRange1 koordinaatit on oltava suurempia kuin PVPRange2:ssa jos ei ole se laittaa pvpn pelaajille 
-#   pvp alueen ulko puolella !!!HUOM
-PVPRange1:
-    X: 100
-    Z: 100
-PVPRange2:
-    X: -100
-    Z: -100
+KupariTiimiSpawnArea:
+    Y: 100
+    X1: 100
+    Z1: 100
+    X2: -100
+    Z2: -100
+KultaTiimiSpawnArea:
+    Y: 100
+    X1: 100
+    Z1: 100
+    X2: -100
+    Z2: -100

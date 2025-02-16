@@ -8,6 +8,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="resources"/>
 	<classpathentry kind="lib" path="C:/Users/matti/Documents/MINECRAFT/KupariCraft/Spigot/Spigot-API/target/spigot-api-1.21.1-R0.1-SNAPSHOT-shaded.jar"/>
-	<classpathentry kind="lib" path="C:/Users/matti/Documents/MINECRAFT/APIs/LuckPerms-Bukkit-5.4.154.jar"/>
+	<classpathentry kind="lib" path="C:/Users/matti/Downloads/worldguard-bukkit-7.0.12-dist.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
