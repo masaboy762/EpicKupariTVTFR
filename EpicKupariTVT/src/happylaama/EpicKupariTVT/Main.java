@@ -41,6 +41,8 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 
@@ -56,14 +58,117 @@ public class Main extends JavaPlugin implements Listener{
 	private List<Player> TeamKultak = new ArrayList<>();
 	private List<Player> LATEPLAYERS = new ArrayList<>();
 	private FileConfiguration config = getConfig();
+	private static final Random RANDOM = new Random();
+	private boolean Frozen = false;
 	@Override
 	public void onEnable() {
 		saveDefaultConfig();
 		
         Bukkit.getPluginManager().registerEvents(this, this);
-		
+        
+        getCommand("STARTGAME").setExecutor((sender, command, label, args) -> {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("§cTämän komennon voi suorittaa vain pelaaja!");
+                return true;
+            }
+            if(GameRunning) {
+		    	GameRunning = true;
+		    	sender.sendMessage("Peli aloitettu!");
+		    	
+		    	for (Player player : Bukkit.getOnlinePlayers()) {
+		            player.sendTitle("PELI ALKAMASSA!", "Odotellaan pelaajia!", 10, 70, 20); 
+		            
+		        }
+		    } else if(GameStarting) {
+		    	sender.sendMessage("odotellaan pelaajia! Lähetä komento uudestaan jotta peli alkaa");
+		    
+		    GameStarting = true;
+		    GAME();
+		    }
+            
+            return true;
+        
+
+        });
+        getCommand("TASOITA").setExecutor((sender, command, label, args) -> {
+            
+            
+            if(TeamKupari.size() < TeamKulta.size()) {
+            	int temp = TeamKulta.size() - TeamKupari.size();
+            	for (int i = 0; i < temp; i++) {
+            		Player player = getRandomPlayer(TeamKulta);
+            		TeamKulta.remove(player);
+            		TeamKupari.add(player);
+            		player.sendTitle("Sinut siirrettiin Kupari tiimiin!", "Sinut siirrettiin kupari tiimiin koska pelaaja määrä tiimien välissä ei ollut tasainen");
+            		
+    				
+    			}
+            	sender.sendMessage("§"+temp + " Pelaajaa siirrettiin!");
+            	
+            }
+            if(TeamKupari.size() > TeamKulta.size()) {
+            	int temp = TeamKupari.size() - TeamKulta.size();
+            	for (int i = 0; i < temp; i++) {
+            		Player player = getRandomPlayer(TeamKupari);
+            		TeamKupari.remove(player);
+            		TeamKulta.add(player);
+            		player.sendTitle("Sinut siirrettiin Kulta tiimiin!", "Sinut siirrettiin kulta tiimiin koska pelaaja määrä tiimien välissä ei ollut tarpeeksi tasainen");
+            		
+    				
+    			}
+            	sender.sendMessage("§"+temp + " Pelaajaa siirrettiin!");
+            }
+            return true;
+        });
+        getCommand("FREEZE").setExecutor((sender, command, label, args) -> {
+        	Player target = Bukkit.getPlayer(args[0]);
+        	if(Frozen) {
+        	if (args.length < 1) {
+        		for (Player player : TeamKupari) {
+        			freezePlayer(player);
+                }
+        		for (Player player : TeamKulta) {
+        			freezePlayer(player);
+                }
+        	} else {
+        		freezePlayer(target);
+        	}
+                return true;
+            } else {
+            	if (args.length < 1) {
+            		for (Player player : TeamKupari) {
+            			unfreezePlayer(player);
+                    }
+            		for (Player player : TeamKulta) {
+            			unfreezePlayer(player);
+                    }
+            	} else {
+            		unfreezePlayer(target);
+            	}
+            }
+            return true;
+        });
         
 	}
+	public static void freezePlayer(Player player) {
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 250, false, false)); // Extreme Slowness
+        player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 128, false, false)); // No Jumping
+        player.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, Integer.MAX_VALUE, 10, false, false)); // Slower Attacks
+        player.sendTitle("Sinut on jäädytetty", null);
+    }
+
+    public static void unfreezePlayer(Player player) {
+        player.removePotionEffect(PotionEffectType.SLOWNESS);
+        player.removePotionEffect(PotionEffectType.JUMP_BOOST);
+        player.removePotionEffect(PotionEffectType.MINING_FATIGUE);
+        player.sendTitle("Sinut on sulatettu", null);
+    }
+	public static <T> T getRandomPlayer(List<T> players) {
+        if (players == null || players.isEmpty()) {
+            throw new IllegalArgumentException("Player list cannot be null or empty");
+        }
+        return players.get(RANDOM.nextInt(players.size()));
+    }
 	@Override
     public void onDisable() {  
     }
@@ -169,36 +274,7 @@ public class Main extends JavaPlugin implements Listener{
 		
     }
 	
-	@Override
-	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-		
-	    
-
-	    if (command.getName().equalsIgnoreCase("STARTGAME")) {
-            
-
-	    	if(GameRunning) {
-		    	GameRunning = true;
-		    	sender.sendMessage("Peli aloitettu!");
-		    	
-		    	for (Player player : Bukkit.getOnlinePlayers()) {
-		            player.sendTitle("PELI ALKAMASSA!", "Odotellaan pelaajia!", 10, 70, 20); 
-		            
-		        }
-		    } else if(GameStarting) {
-		    	sender.sendMessage("odotellaan pelaajia! Lähetä komento uudestaan jotta peli alkaa");
-		    
-		    GameStarting = true;
-		    GAME();
-		    }
-            
-            return true;
-        }
-
-	    
-	    
-	    return true;
-	}
+	
 	public void openTeamSelectionMenu(Player player) {
 
 	    Inventory gui = Bukkit.createInventory(null, 9, "Valitse tiimi");

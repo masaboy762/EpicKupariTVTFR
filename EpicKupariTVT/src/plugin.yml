@@ -4,10 +4,18 @@ main: happylaama.EpicKupariTVT.Main  # Replace with your plugin's main class pat
 api-version: 1.21  # Specify the Minecraft API version you're targeting
 
 commands:
-  STARTGAME:
-    description: Komennon voi suorittaa kaksi kertaa ensimmäisellä kerralla komento aloittaa pelin siihen kohtaan missä se odottaa pelaajia seuraavan kerran kun komento suoritetaan se aloittaa pelin.
-    usage: /STARTGAME
-    permission: EpicKupariTVT.USE
+    STARTGAME:
+        description: Komennon voi suorittaa kaksi kertaa ensimmäisellä kerralla komento aloittaa pelin siihen kohtaan missä se odottaa pelaajia seuraavan kerran kun komento suoritetaan se aloittaa pelin.
+        usage: /STARTGAME
+        permission: EpicKupariTVT.USE
+    FREEZE:
+        description: Komento Pelaajien Jäädyttämiseen. Jätä tyhjäksi jotta kaikki pelaajat jäätyy.
+        usage: /FREEZE <player>
+        permission: EpicKupariTVT.USE
+    TASOITA:
+        description: Komento tiimien pelaajien tasoitukseen.
+        usage: /TASOITA
+        permission: EpicKupariTVT.USE
 permissions:
     EpicKupariTVT.KupariTiimi: {}
     EpicKupariTVT.KultaTiimi: {}
